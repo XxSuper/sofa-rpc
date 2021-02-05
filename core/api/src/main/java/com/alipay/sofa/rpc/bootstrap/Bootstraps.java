@@ -40,12 +40,14 @@ public class Bootstraps {
      * @return 发布启动类
      */
     public static <T> ProviderBootstrap<T> from(ProviderConfig<T> providerConfig) {
+        // 如果没有设置 bootstrap 那就会使用默认的 bootstrap
         String bootstrap = providerConfig.getBootstrap();
         if (StringUtils.isEmpty(bootstrap)) {
-            // Use default provider bootstrap
+            // Use default provider bootstrap, read from rpcConfigs 默认是 sofa
             bootstrap = RpcConfigs.getStringValue(RpcOptions.DEFAULT_PROVIDER_BOOTSTRAP);
             providerConfig.setBootstrap(bootstrap);
         }
+        // 获取执行 export 的 providerBootstrap, 默认是 DefaultProviderBootstrap
         ProviderBootstrap providerBootstrap = ExtensionLoaderFactory.getExtensionLoader(ProviderBootstrap.class)
             .getExtension(bootstrap, new Class[] { ProviderConfig.class }, new Object[] { providerConfig });
         return (ProviderBootstrap<T>) providerBootstrap;

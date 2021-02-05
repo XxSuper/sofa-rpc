@@ -66,13 +66,16 @@ public final class ServerFactory {
                 // 算下网卡和端口
                 resolveServerConfig(serverConfig);
 
+                // 加载 server 扩展类
                 ExtensionClass<Server> ext = ExtensionLoaderFactory.getExtensionLoader(Server.class)
                     .getExtensionClass(serverConfig.getProtocol());
                 if (ext == null) {
                     throw new SofaRpcRuntimeException(LogCodes.getLog(LogCodes.ERROR_UNSUPPORTED_PROTOCOL,
                         serverConfig.getProtocol()));
                 }
+                // 获取 server 实例
                 server = ext.getExtInstance();
+                // 初始化 server
                 server.init(serverConfig);
                 SERVER_MAP.put(serverConfig.getPort() + "", server);
             }
@@ -95,6 +98,7 @@ public final class ServerFactory {
         if (boundHost == null) {
             String host = serverConfig.getHost();
             if (StringUtils.isBlank(host)) {
+                // 获取系统本地 host
                 host = SystemInfo.getLocalHost();
                 serverConfig.setHost(host);
                 // windows绑定到0.0.0.0的某个端口以后，其它进程还能绑定到该端口

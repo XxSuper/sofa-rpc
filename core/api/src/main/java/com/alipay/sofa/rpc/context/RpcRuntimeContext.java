@@ -92,8 +92,9 @@ public class RpcRuntimeContext {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Welcome! Loading SOFA RPC Framework : {}, PID is:{}", Version.BUILD_VERSION, PID);
         }
+        // 放入当前的 sofa 版本号
         put(RpcConstants.CONFIG_KEY_RPC_VERSION, Version.RPC_VERSION);
-        // 初始化一些上下文
+        // 初始化一些上下文，默认配置、自定义配置信息通过配置加载器和操作入口 RpcConfigs 静态代码块在类加载的时候加载
         initContext();
         // 初始化其它模块
         ModuleFactory.installModules();

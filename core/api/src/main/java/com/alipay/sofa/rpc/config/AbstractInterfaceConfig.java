@@ -828,6 +828,7 @@ public abstract class AbstractInterfaceConfig<T, S extends AbstractInterfaceConf
      * @return Map<String Object> unmodifiableMap
      */
     public synchronized Map<String, Object> getConfigValueCache(boolean rebuild) {
+        // 第一次进来 configValueCache 是空的
         if (configValueCache != null && !rebuild) {
             return configValueCache;
         }
@@ -852,6 +853,7 @@ public abstract class AbstractInterfaceConfig<T, S extends AbstractInterfaceConf
         }
         // 复制接口级参数属性
         BeanUtils.copyPropertiesToMap(this, StringUtils.EMPTY, context);
+        // Collections.unmodifiableMap() 返回一个 "只读" 的 map
         configValueCache = Collections.unmodifiableMap(context);
         return configValueCache;
     }

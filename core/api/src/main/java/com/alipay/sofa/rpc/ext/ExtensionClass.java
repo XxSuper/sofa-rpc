@@ -100,10 +100,12 @@ public class ExtensionClass<T> implements Sortable {
     public T getExtInstance(Class[] argTypes, Object[] args) {
         if (clazz != null) {
             try {
+                // singleton 是在加载 spi 的时候从 extensible 注解上面取出注入的
                 if (singleton) { // 如果是单例
                     if (instance == null) {
                         synchronized (this) {
                             if (instance == null) {
+                                // 自动检测构造方法是否跟传的参数一致，一致则使用该构造器构造对象
                                 instance = ClassUtils.newInstanceWithArgs(clazz, argTypes, args);
                             }
                         }

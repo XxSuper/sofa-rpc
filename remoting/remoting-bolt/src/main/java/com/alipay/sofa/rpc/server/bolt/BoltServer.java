@@ -110,7 +110,7 @@ public class BoltServer implements Server {
             if (started) {
                 return;
             }
-            // 生成Server对象
+            // 生成Server对象，调用的阿里的另外一个开源框架 SOFA BOLT，传入绑定 host 和 port
             remotingServer = initRemotingServer();
             try {
                 if (remotingServer.start()) {
@@ -123,7 +123,9 @@ public class BoltServer implements Server {
                 }
                 started = true;
 
+                // 是否开启服务启动消息总线
                 if (EventBus.isEnable(ServerStartedEvent.class)) {
+                    // 发布服务启动事件
                     EventBus.post(new ServerStartedEvent(serverConfig, bizThreadPool));
                 }
 
@@ -178,9 +180,11 @@ public class BoltServer implements Server {
     public void registerProcessor(ProviderConfig providerConfig, Invoker instance) {
         // 缓存Invoker对象
         String key = ConfigUniqueNameGenerator.getUniqueName(providerConfig);
+        // 缓存 Invoker 对象
         invokerMap.put(key, instance);
+        // 放入回收失效缓存中
         ReflectCache.registerServiceClassLoader(key, providerConfig.getProxyClass().getClassLoader());
-        // 缓存接口的方法
+        // 缓存接口的方法，这里主要是将每个代理接口的方法和参数缓存起来
         for (Method m : providerConfig.getProxyClass().getMethods()) {
             ReflectCache.putOverloadMethodCache(key, m);
         }

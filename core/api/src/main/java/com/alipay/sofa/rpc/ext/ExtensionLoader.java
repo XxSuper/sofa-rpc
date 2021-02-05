@@ -111,6 +111,7 @@ public class ExtensionLoader<T> {
      * @param listener       扩展加载监听器
      */
     protected ExtensionLoader(Class<T> interfaceClass, boolean autoLoad, ExtensionLoaderListener<T> listener) {
+        // 如果 RPC 框架正在关闭则属性全部初始化为空 return
         if (RpcRunningState.isShuttingDown()) {
             this.interfaceClass = null;
             this.interfaceName = null;
@@ -131,6 +132,7 @@ public class ExtensionLoader<T> {
         if (listener != null) {
             listeners.add(listener);
         }
+        // 获取 extensible 注解，上面会有几个属性。file 指定扩展文件名称，singleton 是否单例，coded 是否需要编码
         Extensible extensible = interfaceClass.getAnnotation(Extensible.class);
         if (extensible == null) {
             throw new IllegalArgumentException(
@@ -139,11 +141,16 @@ public class ExtensionLoader<T> {
             this.extensible = extensible;
         }
 
+        // 如果是单例的，则存入 factory, 也就是一个线程安全的 ConcurrentHashMap
         this.factory = extensible.singleton() ? new ConcurrentHashMap<String, T>() : null;
+        // 初始化一个保存全部扩展的对象的 ConcurrentHashMap
         this.all = new ConcurrentHashMap<String, ExtensionClass<T>>();
+        // 是否自动加载，一般都是
         if (autoLoad) {
+            // 从配置中心或者配置文件中加载扩展类文件相对路径
             List<String> paths = RpcConfigs.getListValue(RpcOptions.EXTENSION_LOAD_PATH);
             for (String path : paths) {
+                // 解析文件
                 loadFromFile(path);
             }
         }
@@ -158,8 +165,10 @@ public class ExtensionLoader<T> {
         }
         // 默认如果不指定文件名字，就是接口名
         String file = StringUtils.isBlank(extensible.file()) ? interfaceName : extensible.file().trim();
+        // 获得完整的相对地址
         String fullFileName = path + file;
         try {
+            // 获得当前类的类加载器，这个是用来获取 resource 的也就是获取资源文件
             ClassLoader classLoader = ClassLoaderUtils.getClassLoader(getClass());
             loadFromClassLoader(classLoader, fullFileName);
         } catch (Throwable t) {
@@ -171,6 +180,7 @@ public class ExtensionLoader<T> {
     }
 
     protected void loadFromClassLoader(ClassLoader classLoader, String fullFileName) throws Throwable {
+        // 根据全路径名从 classLoader 里面获取资源文件
         Enumeration<URL> urls = classLoader != null ? classLoader.getResources(fullFileName)
             : ClassLoader.getSystemResources(fullFileName);
         // 可能存在多个文件。
@@ -187,6 +197,7 @@ public class ExtensionLoader<T> {
                     reader = new BufferedReader(new InputStreamReader(url.openStream(), "UTF-8"));
                     String line;
                     while ((line = reader.readLine()) != null) {
+                        // 读取处理逻辑
                         readLine(url, line);
                     }
                 } catch (Throwable t) {
@@ -204,6 +215,7 @@ public class ExtensionLoader<T> {
     }
 
     protected void readLine(URL url, String line) {
+        // 解析一行，获取他们的 alias 和 className，这个方法里对空做了处理，别名为空时仍可正常返回
         String[] aliasAndClassName = parseAliasAndClassName(line);
         if (aliasAndClassName == null || aliasAndClassName.length != 2) {
             return;
@@ -224,11 +236,12 @@ public class ExtensionLoader<T> {
             }
             return;
         }
-
+        // 加载扩展
         loadExtension(alias, tmp, StringUtils.toString(url), className);
     }
 
     private void loadExtension(String alias, Class loadedClazz, String location, String className) {
+        // 用来判断A类是否是B类的子类或者子接口, Object 是所有类的父类
         if (!interfaceClass.isAssignableFrom(loadedClazz)) {
             throw new IllegalArgumentException("Error when load extension of extensible " + interfaceName +
                 " from file:" + location + ", " + className + " is not subtype of interface.");
@@ -241,6 +254,7 @@ public class ExtensionLoader<T> {
             throw new IllegalArgumentException("Error when load extension of extensible " + interfaceName +
                 " from file:" + location + ", " + className + " must add annotation @Extension.");
         } else {
+            // 获取注解上面的扩展点名字必须写，不写就会报错
             String aliasInCode = extension.value();
             if (StringUtils.isBlank(aliasInCode)) {
                 // 扩展实现类未配置@Extension 标签
@@ -366,6 +380,7 @@ public class ExtensionLoader<T> {
 
     private void loadSuccess(String alias, ExtensionClass<T> extensionClass) {
         if (listeners != null) {
+            // 如果有监听器则通知监听器
             for (ExtensionLoaderListener<T> listener : listeners) {
                 try {
                     listener.onLoad(extensionClass);

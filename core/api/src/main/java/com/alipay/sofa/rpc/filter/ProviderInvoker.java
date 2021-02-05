@@ -68,6 +68,7 @@ public class ProviderInvoker<T> extends FilterInvoker {
      * @param providerConfig the provider config
      */
     public ProviderInvoker(ProviderConfig<T> providerConfig) {
+        // 调用父类构造方法
         super(providerConfig);
         this.providerConfig = providerConfig;
     }

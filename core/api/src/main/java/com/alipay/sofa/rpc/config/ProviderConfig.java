@@ -157,7 +157,9 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig<T, ProviderConfig
             return proxyClass;
         }
         try {
+            // 如果设置的 interfaceId 不为空
             if (StringUtils.isNotBlank(interfaceId)) {
+                // 反射获取代理类
                 this.proxyClass = ClassUtils.forName(interfaceId);
                 if (!proxyClass.isInterface()) {
                     if ((getServer() != null) && getServer().size() != 0) {
@@ -527,8 +529,10 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig<T, ProviderConfig
      */
     public synchronized void export() {
         if (providerBootstrap == null) {
+            // 获取执行的 providerBootstrap
             providerBootstrap = Bootstraps.from(this);
         }
+        // 使用获取的 providerBootstrap 执行发布
         providerBootstrap.export();
     }
 

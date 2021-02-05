@@ -96,6 +96,7 @@ public class BeanUtils {
             // 复制属性
             Class returnc = method.getReturnType();
             if (ReflectUtils.isBeanPropertyReadMethod(method)) {
+                // 获取属性名称
                 String propertyName = ReflectUtils.getPropertyNameFromBeanReadMethod(method);
                 try {
                     if (ReflectUtils.getPropertySetterMethod(clazz, propertyName, returnc) == null) {
@@ -123,6 +124,7 @@ public class BeanUtils {
             if (map.containsKey(prefix + fieldName)) {
                 continue;
             }
+            // 获取字段修饰符
             int m = field.getModifiers();
             if (!Modifier.isStatic(m) && !Modifier.isTransient(m)) {
                 Object val = null;

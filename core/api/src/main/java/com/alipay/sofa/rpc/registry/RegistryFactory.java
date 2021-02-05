@@ -66,13 +66,16 @@ public class RegistryFactory {
             // 注意：RegistryConfig重写了equals方法，如果多个RegistryConfig属性一样，则认为是一个对象
             Registry registry = ALL_REGISTRIES.get(registryConfig);
             if (registry == null) {
+                // 根据配置的协议找对应的扩展类加载
                 protocol = registryConfig.getProtocol();
                 ExtensionClass<Registry> ext = ExtensionLoaderFactory.getExtensionLoader(Registry.class)
                     .getExtensionClass(protocol);
                 if (ext == null) {
                     throw new SofaRpcRuntimeException(LogCodes.getLog(LogCodes.ERROR_LOAD_EXT, "Registry", protocol));
                 }
+                // 实例化扩展类
                 registry = ext.getExtInstance(new Class[] { RegistryConfig.class }, new Object[] { registryConfig });
+                // 放入 ALL_REGISTRIES 供后面 register 使用
                 ALL_REGISTRIES.put(registryConfig, registry);
             }
             return registry;

@@ -211,13 +211,16 @@ public class ZookeeperRegistry extends Registry {
             address = addressInput;
             rootPath = CONTEXT_SEP;
         }
+        // 是否本地优先
         preferLocalFile = !CommonUtils.isFalse(registryConfig.getParameter(PARAM_PREFER_LOCAL_FILE));
+        // 是否使用临时节点
         ephemeralNode = !CommonUtils.isFalse(registryConfig.getParameter(PARAM_CREATE_EPHEMERAL));
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info(
                 "Init ZookeeperRegistry with address {}, root path is {}. preferLocalFile:{}, ephemeralNode:{}",
                 address, rootPath, preferLocalFile, ephemeralNode);
         }
+        // Curator 重连策略
         RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
         CuratorFrameworkFactory.Builder zkClientuilder = CuratorFrameworkFactory.builder()
             .connectString(address)
@@ -796,7 +799,7 @@ public class ZookeeperRegistry extends Registry {
 
         String scheme = registryConfig.getParameter("scheme");
 
-        //如果存在多个认证信息，则在参数形式为为addAuth=user1:paasswd1,user2:passwd2
+        //如果存在多个认证信息，则在参数形式为addAuth=user1:paasswd1,user2:passwd2
         String addAuth = registryConfig.getParameter("addAuth");
 
         if (StringUtils.isNotEmpty(addAuth)) {

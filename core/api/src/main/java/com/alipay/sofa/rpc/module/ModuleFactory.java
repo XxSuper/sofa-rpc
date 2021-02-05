@@ -75,7 +75,9 @@ public class ModuleFactory {
      * 加载全部模块
      */
     public static void installModules() {
+        // 使用 ExtensionLoaderFactory 获取传入 class 的 ExtensionLoader
         ExtensionLoader<Module> loader = ExtensionLoaderFactory.getExtensionLoader(Module.class);
+        // 获取需要加载的模块配置
         String moduleLoadList = RpcConfigs.getStringValue(RpcOptions.MODULE_LOAD_LIST);
         for (Map.Entry<String, ExtensionClass<Module>> o : loader.getAllExtensions().entrySet()) {
             String moduleName = o.getKey();

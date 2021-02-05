@@ -108,6 +108,7 @@ public class DefaultProviderBootstrap<T> extends ProviderBootstrap<T> {
     }
 
     private void doExport() {
+        // 已经发布则直接 return
         if (exported) {
             return;
         }
@@ -115,6 +116,7 @@ public class DefaultProviderBootstrap<T> extends ProviderBootstrap<T> {
         // 检查参数
         checkParameters();
 
+        // 设置发布应用名称
         String appName = providerConfig.getAppName();
 
         //key  is the protocol of server,for concurrent safe
@@ -122,8 +124,10 @@ public class DefaultProviderBootstrap<T> extends ProviderBootstrap<T> {
         // 将处理器注册到server
         List<ServerConfig> serverConfigs = providerConfig.getServer();
         for (ServerConfig serverConfig : serverConfigs) {
+            // 获取发布协议
             String protocol = serverConfig.getProtocol();
 
+            // key = interfaceId + ":" + uniqueId + ":" + protocol
             String key = providerConfig.buildKey() + ":" + protocol;
 
             if (LOGGER.isInfoEnabled(appName)) {
@@ -135,11 +139,16 @@ public class DefaultProviderBootstrap<T> extends ProviderBootstrap<T> {
             if (cnt == null) { // 没有发布过
                 cnt = CommonUtils.putToConcurrentMap(EXPORTED_KEYS, key, new AtomicInteger(0));
             }
+
+            // 原子性自增
             int c = cnt.incrementAndGet();
+            // 将发布过的协议放入 hasExportedInCurrent
             hasExportedInCurrent.put(serverConfig.getProtocol(), true);
+            // 读取配置文件，获取最大可重复发布次数，默认是 1
             int maxProxyCount = providerConfig.getRepeatedExportLimit();
             if (maxProxyCount > 0) {
                 if (c > maxProxyCount) {
+                    // 超过最大数量 decrementCounter(), 将 EXPORTED_KEYS.get(key) 大于 0 的 decrementAndGet 原子性自减
                     decrementCounter(hasExportedInCurrent);
                     // 超过最大数量，直接抛出异常
                     throw new SofaRpcRuntimeException(LogCodes.getLog(LogCodes.ERROR_DUPLICATE_PROVIDER_CONFIG, key,
@@ -160,6 +169,7 @@ public class DefaultProviderBootstrap<T> extends ProviderBootstrap<T> {
             preProcessProviderTarget(providerConfig, (ProviderProxyInvoker) providerProxyInvoker);
             // 初始化注册中心
             if (providerConfig.isRegister()) {
+                // 获取配置的 registryConfigs
                 List<RegistryConfig> registryConfigs = providerConfig.getRegistry();
                 if (CommonUtils.isNotEmpty(registryConfigs)) {
                     for (RegistryConfig registryConfig : registryConfigs) {
@@ -170,10 +180,12 @@ public class DefaultProviderBootstrap<T> extends ProviderBootstrap<T> {
             // 将处理器注册到server
             for (ServerConfig serverConfig : serverConfigs) {
                 try {
+                    // 构建 Server 实例
                     Server server = serverConfig.buildIfAbsent();
-                    // 注册请求调用器
+                    // 注册请求调用器。接收到请求后，根据请求参数获取放入到 Invoker 列表中的 invoker。例如：BoltServerProcessor#handleRequest()
                     server.registerProcessor(providerConfig, providerProxyInvoker);
                     if (serverConfig.isAutoStart()) {
+                        // 启动 server
                         server.start();
                     }
 
@@ -189,6 +201,7 @@ public class DefaultProviderBootstrap<T> extends ProviderBootstrap<T> {
             providerConfig.setConfigListener(new ProviderAttributeListener());
             register();
         } catch (Exception e) {
+            // 捕获异常先对发布服务数 decrement
             decrementCounter(hasExportedInCurrent);
             if (e instanceof SofaRpcRuntimeException) {
                 throw e;
@@ -224,8 +237,10 @@ public class DefaultProviderBootstrap<T> extends ProviderBootstrap<T> {
     protected void checkParameters() {
         // 检查注入的ref是否接口实现类
         Class proxyClass = providerConfig.getProxyClass();
+        // key = interfaceId + CFG 默认配置的 uniqueId
         String key = providerConfig.buildKey();
         T ref = providerConfig.getRef();
+        // 自身类.class.isInstance (自身实例或子类实例) 才返回 true
         if (!proxyClass.isInstance(ref)) {
             String name = ref == null ? "null" : ref.getClass().getName();
             throw new SofaRpcRuntimeException(LogCodes.getLog(LogCodes.ERROR_REFERENCE_AND_INTERFACE, name,
@@ -245,10 +260,11 @@ public class DefaultProviderBootstrap<T> extends ProviderBootstrap<T> {
      */
     protected void checkMethods(Class<?> itfClass) {
         ConcurrentHashMap<String, Boolean> methodsLimit = new ConcurrentHashMap<String, Boolean>();
+        // 获取代理类以及父类或者父接口中所有的公共方法(public 修饰符修饰的)
         for (Method method : itfClass.getMethods()) {
             String methodName = method.getName();
             if (methodsLimit.containsKey(methodName)) {
-                // 重名的方法
+                // 重名的方法，重载的方法会提示 warn, sofa rpc 不建议一个服务里使用多个同名方法
                 if (LOGGER.isWarnEnabled(providerConfig.getAppName())) {
                     // TODO WARN
                     LOGGER.warnWithApp(providerConfig.getAppName(), "Method with same name \"" + itfClass.getName()
@@ -258,6 +274,7 @@ public class DefaultProviderBootstrap<T> extends ProviderBootstrap<T> {
             // 判断服务下方法的黑白名单
             Boolean include = methodsLimit.get(methodName);
             if (include == null) {
+                // 检查是否在黑白名单中，黑白名单这两个都是在配置文件配置的
                 include = inList(providerConfig.getInclude(), providerConfig.getExclude(), methodName); // 检查是否在黑白名单中
                 methodsLimit.putIfAbsent(methodName, include);
             }
@@ -335,10 +352,14 @@ public class DefaultProviderBootstrap<T> extends ProviderBootstrap<T> {
             List<RegistryConfig> registryConfigs = providerConfig.getRegistry();
             if (registryConfigs != null) {
                 for (RegistryConfig registryConfig : registryConfigs) {
+                    // 根据 registryConfig 加载扩展类 registry
                     Registry registry = RegistryFactory.getRegistry(registryConfig);
+                    // 初始化配置
                     registry.init();
+                    // 启动
                     registry.start();
                     try {
+                        // 注册和订阅服务
                         registry.register(providerConfig);
                     } catch (SofaRpcRuntimeException e) {
                         throw e;

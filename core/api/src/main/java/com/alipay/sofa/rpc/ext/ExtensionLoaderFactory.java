@@ -46,11 +46,14 @@ public class ExtensionLoaderFactory {
      * @return ExtensionLoader of this class
      */
     public static <T> ExtensionLoader<T> getExtensionLoader(Class<T> clazz, ExtensionLoaderListener<T> listener) {
+        // 第一次进来 loader 是空的
         ExtensionLoader<T> loader = LOADER_MAP.get(clazz);
         if (loader == null) {
+            // 锁住 class 双重校验，防止重复初始化
             synchronized (ExtensionLoaderFactory.class) {
                 loader = LOADER_MAP.get(clazz);
                 if (loader == null) {
+                    // 实例化 loader
                     loader = new ExtensionLoader<T>(clazz, listener);
                     LOADER_MAP.put(clazz, loader);
                 }
